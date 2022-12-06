@@ -1,0 +1,27 @@
+[package]
+name = "bevy_3d_game" # ToDo
+version = "0.1.0"
+publish = false
+authors = ["Michael O'Connell <>"] # ToDo: add email
+edition = "2021"
+exclude = ["dist", "build", "assets", "credits"]
+
+[profile.dev.package."*"]
+opt-level = 3
+
+[profile.dev]
+opt-level = 1
+
+[profile.release]
+lto = true
+codegen-units = 1
+
+[features]
+dev = [
+    "bevy/dynamic",
+]
+
+[dependencies]
+bevy = { version = "0.9", features = ["dynamic"]}
+bevy_atmosphere = "0.5.0"
+bevy_spectator = "0.1"
