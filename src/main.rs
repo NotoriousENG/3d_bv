@@ -4,10 +4,14 @@ use bevy_spectator::*;
 
 // Defines the amount of time that should elapse between each physics step.
 const TIME_STEP: f32 = 1.0 / 60.0;
-const PLAYER_SPEED: f32 = 10.0;
+const MAX_SPEED: f32 = 20.0;
+const ACCELERATION: f32 = 0.75;
 
 #[derive(Component)]
 struct Player;
+
+#[derive(Component)]
+struct Velocity(Vec3);
 
 fn main() {
     App::new()
@@ -66,25 +70,46 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
             ..default()
         },
         Player,
+        Velocity(Vec3::ZERO),
     ));
 }
 
 fn move_player(
     keyboard_input: Res<Input<KeyCode>>,
-    mut query: Query<&mut Transform, With<Player>>,
+    mut query: Query<(&mut Transform, &mut Velocity), With<Player>>,
 ) {
-    let mut player_transform = query.single_mut();
-    let mut direction = Vec3::ZERO;
+    let (mut player_transform, mut player_velocity) = query.single_mut();
 
-    // store xy direction in a vector based off WASD keys
+    // store xy direction input in a vector based off WASD keys
     let x = keyboard_input.pressed(KeyCode::D) as i32 as f32
         - keyboard_input.pressed(KeyCode::A) as i32 as f32;
     let y = keyboard_input.pressed(KeyCode::W) as i32 as f32
         - keyboard_input.pressed(KeyCode::S) as i32 as f32;
-    direction += Vec3::new(x, y, 0.0).normalize_or_zero();
+    let input_movement_vector = Vec3::new(x, y, 0.0).normalize_or_zero();
 
-    // Calculate the new horizontal paddle position based on player input
-    let next_player_position = player_transform.translation + direction * PLAYER_SPEED * TIME_STEP;
+    // apply input to velocity
+    player_velocity.0 = move_toward(player_velocity.0, input_movement_vector * MAX_SPEED, ACCELERATION);
 
-    player_transform.translation = next_player_position;
+    // move player based on velocity
+    player_transform.translation += player_velocity.0 * TIME_STEP;
+
+    // set rotation degrees in euler angles for x and y to velocity / 2
+    player_transform.rotation = Quat::from_euler(EulerRot::XYZ, deg_to_rad(player_velocity.0.y / 2.0), deg_to_rad(player_velocity.0.x / 2.0), deg_to_rad(-player_velocity.0.x / 2.0));
+}
+
+// Moves from toward to by the delta value and returns a new vector
+fn move_toward(from: Vec3, to: Vec3, delta: f32) -> Vec3  {
+    let mut result = to - from;
+    let length = result.length();
+    if length <= delta || length == 0.0 {
+        return to;
+    }
+    result *= delta / length;
+    result += from;
+    result
+}
+
+// convert from degrees to radians
+fn deg_to_rad(degrees: f32) -> f32 {
+    degrees * std::f32::consts::PI / 180.0
 }
