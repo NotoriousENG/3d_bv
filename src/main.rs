@@ -1,4 +1,5 @@
 use bevy::{prelude::*, core_pipeline::bloom::BloomSettings};
+use bevy::render::camera::Projection;
 use bevy_atmosphere::prelude::*;
 use bevy_spectator::*;
 
@@ -53,8 +54,13 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
                 hdr: true,
                 ..default()
              },
-            transform: Transform::from_xyz(0.7, 0.7, 15.0)
-                .looking_at(Vec3::new(0.0, 0.3, 0.0), Vec3::Y),
+            projection: Projection::Perspective( PerspectiveProjection {
+                fov: 70.0,
+                near: 0.05,
+                far: 300.0,
+                ..default()
+            }),
+            transform: Transform::from_xyz(0.0, 0.0, 0.0),
             ..default()
         },
         BloomSettings {
@@ -67,6 +73,7 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
     commands.spawn((
         SceneBundle {
             scene: asset_server.load("models/Spaceship/player.gltf#Scene0"),
+            transform: Transform::from_xyz(0.0, 0.0, -15.0),
             ..default()
         },
         Player,
@@ -92,6 +99,8 @@ fn move_player(
 
     // move player based on velocity
     player_transform.translation += player_velocity.0 * TIME_STEP;
+    player_transform.translation.x = player_transform.translation.x.clamp(-15.0, 15.0);
+    player_transform.translation.y = player_transform.translation.y.clamp(-8.0, 8.0);
 
     // set rotation degrees in euler angles for x and y to velocity / 2
     player_transform.rotation = Quat::from_euler(EulerRot::XYZ, deg_to_rad(player_velocity.0.y / 2.0), deg_to_rad(player_velocity.0.x / 2.0), deg_to_rad(-player_velocity.0.x / 2.0));
