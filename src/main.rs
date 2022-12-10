@@ -1,5 +1,8 @@
 mod skybox;
 
+use rand::prelude::*;
+use std::time::Duration;
+
 use bevy::{core_pipeline::bloom::BloomSettings, prelude::*, render::camera::Projection};
 
 use crate::skybox::SkyboxPlugin;
@@ -9,13 +12,23 @@ const TIME_STEP: f32 = 1.0 / 60.0;
 const MAX_SPEED: f32 = 20.0;
 const ACCELERATION: f32 = 0.75;
 const BULLET_SPEED: f32 = 300.0;
-const Z_RANGE: f32 = 300.0;
+const BOUNDS_POS: Vec3 = Vec3::new(15.0, 8.0, 300.0);
+const ENEMY_SPEED: f32 = 100.0;
+const ENEMY_SPAWN_TIME: u64 = 1;
 
 #[derive(Component)]
 struct Player;
 
 #[derive(Component)]
+struct Enemy;
+
+#[derive(Component)]
 struct Velocity(Vec3);
+
+#[derive(Resource)]
+struct EnemySpawnTime {
+    timer: Timer,
+}
 
 fn main() {
     App::new()
@@ -30,6 +43,7 @@ fn main() {
         .add_system(move_player)
         .add_system(velocity_movement)
         .add_system(fire_bullet)
+        .add_system(spawn_enemies)
         .run();
 }
 
@@ -80,6 +94,10 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
         Player,
         Velocity(Vec3::ZERO),
     ));
+
+    commands.insert_resource(EnemySpawnTime {
+        timer: Timer::new(Duration::from_secs(ENEMY_SPAWN_TIME), TimerMode::Repeating),
+    })
 }
 
 // apply velocity to transform
@@ -91,7 +109,7 @@ fn velocity_movement(
         transform.translation += velocity.0 * TIME_STEP;
 
         // delete if too far away
-        if transform.translation.z > Z_RANGE || transform.translation.z < -Z_RANGE {
+        if transform.translation.z > BOUNDS_POS.z || transform.translation.z < -BOUNDS_POS.z {
             if let Some(entity_commands) = commands.get_entity(entity) {
                 entity_commands.despawn_recursive();
             }
@@ -160,6 +178,36 @@ fn fire_bullet(
         },
         Velocity(player_transform.forward() * BULLET_SPEED),
     ));
+}
+
+fn spawn_enemies(
+    mut commands: Commands,
+    asset_server: Res<AssetServer>,
+    time: Res<Time>,
+    mut spawn_timer: ResMut<EnemySpawnTime>,
+) {
+    spawn_timer.timer.tick(time.delta());
+
+    let mut rng = rand::thread_rng();
+
+    let x_spawn: f32 = rng.gen_range(-BOUNDS_POS.x..BOUNDS_POS.x);
+    let y_spawn: f32 = rng.gen_range(-BOUNDS_POS.y..BOUNDS_POS.y);
+    let vec_spawn = Vec3::new(x_spawn, y_spawn, -BOUNDS_POS.z + 1.0);
+
+    let mut transform_spawn = Transform::from_translation(vec_spawn);
+    transform_spawn.rotate_y(deg_to_rad(180.0));
+
+    if spawn_timer.timer.finished() {
+        commands.spawn((
+            SceneBundle {
+                scene: asset_server.load("models/Spaceship/enemy.gltf#Scene0"),
+                transform: transform_spawn,
+                ..default()
+            },
+            Enemy,
+            Velocity(Vec3::Z * ENEMY_SPEED),
+        ));
+    }
 }
 
 // Moves from toward to by the delta value and returns a new vector
