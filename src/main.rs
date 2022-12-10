@@ -1,7 +1,5 @@
 use bevy::{prelude::*, core_pipeline::bloom::BloomSettings};
 use bevy::render::camera::Projection;
-use bevy_atmosphere::prelude::*;
-use bevy_spectator::*;
 
 // Defines the amount of time that should elapse between each physics step.
 const TIME_STEP: f32 = 1.0 / 60.0;
@@ -22,10 +20,8 @@ fn main() {
             color: Color::WHITE,
             brightness: 1.0 / 5.0f32,
         })
-        .insert_resource(AtmosphereModel::default()) // Default Atmosphere material, we can edit it to simulate another planet
         .insert_resource(Msaa { samples: 4 })
         .add_plugins(DefaultPlugins)
-        .add_plugin(AtmospherePlugin)
         // .add_plugin(SpectatorPlugin)
         .add_startup_system(setup)
         .add_system(move_player)
@@ -70,9 +66,7 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
         BloomSettings {
             intensity: 0.05,
             ..default()
-        },
-        AtmosphereCamera::default(),
-        Spectator,
+        }
     ));
     commands.spawn((
         SceneBundle {
