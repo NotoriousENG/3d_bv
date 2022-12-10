@@ -1,9 +1,9 @@
 mod skybox;
-
 use rand::prelude::*;
 use std::time::Duration;
 
 use bevy::{core_pipeline::bloom::BloomSettings, prelude::*, render::camera::Projection};
+use bevy_rapier3d::prelude::*;
 
 use crate::skybox::SkyboxPlugin;
 
@@ -32,12 +32,14 @@ struct EnemySpawnTime {
 
 fn main() {
     App::new()
+        .add_plugins(DefaultPlugins)
+        .add_plugin(RapierPhysicsPlugin::<NoUserData>::default())
+        .add_plugin(RapierDebugRenderPlugin::default())
         .insert_resource(AmbientLight {
             color: Color::WHITE,
             brightness: 1.0 / 5.0f32,
         })
         .insert_resource(Msaa { samples: 4 })
-        .add_plugins(DefaultPlugins)
         .add_plugin(SkyboxPlugin)
         .add_startup_system(setup)
         .add_system(move_player)
@@ -68,7 +70,7 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
     commands.spawn((
         Camera3dBundle {
             camera: Camera {
-                hdr: true,
+                // hdr: true, // disable to use rapier debug render pipeline
                 ..default()
             },
             projection: Projection::Perspective(PerspectiveProjection {
@@ -177,6 +179,8 @@ fn fire_bullet(
             ..default()
         },
         Velocity(player_transform.forward() * BULLET_SPEED),
+        Collider::cuboid(0.494, 0.494, 2.144),
+        ActiveCollisionTypes::default() | ActiveCollisionTypes::KINEMATIC_KINEMATIC
     ));
 }
 
@@ -206,6 +210,8 @@ fn spawn_enemies(
             },
             Enemy,
             Velocity(Vec3::Z * ENEMY_SPEED),
+            Collider::cuboid(2.17, 1.45, 1.73),
+            ActiveCollisionTypes::default() | ActiveCollisionTypes::KINEMATIC_KINEMATIC
         ));
     }
 }
