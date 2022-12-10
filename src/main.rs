@@ -1,5 +1,8 @@
-use bevy::{prelude::*, core_pipeline::bloom::BloomSettings};
-use bevy::render::camera::Projection;
+mod skybox;
+
+use bevy::{core_pipeline::bloom::BloomSettings, prelude::*, render::camera::Projection};
+
+use crate::skybox::SkyboxPlugin;
 
 // Defines the amount of time that should elapse between each physics step.
 const TIME_STEP: f32 = 1.0 / 60.0;
@@ -22,7 +25,7 @@ fn main() {
         })
         .insert_resource(Msaa { samples: 4 })
         .add_plugins(DefaultPlugins)
-        // .add_plugin(SpectatorPlugin)
+        .add_plugin(SkyboxPlugin)
         .add_startup_system(setup)
         .add_system(move_player)
         .add_system(velocity_movement)
@@ -50,11 +53,11 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
     });
     commands.spawn((
         Camera3dBundle {
-            camera: Camera { 
+            camera: Camera {
                 hdr: true,
                 ..default()
-             },
-            projection: Projection::Perspective( PerspectiveProjection {
+            },
+            projection: Projection::Perspective(PerspectiveProjection {
                 fov: 70.0,
                 near: 0.05,
                 far: 300.0,
@@ -66,7 +69,7 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
         BloomSettings {
             intensity: 0.05,
             ..default()
-        }
+        },
     ));
     commands.spawn((
         SceneBundle {
@@ -78,7 +81,6 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
         Velocity(Vec3::ZERO),
     ));
 }
-
 
 // apply velocity to transform
 fn velocity_movement(
@@ -111,14 +113,23 @@ fn move_player(
     let input_movement_vector = Vec3::new(x, y, 0.0).normalize_or_zero();
 
     // apply input to velocity
-    player_velocity.0 = move_toward(player_velocity.0, input_movement_vector * MAX_SPEED, ACCELERATION);
+    player_velocity.0 = move_toward(
+        player_velocity.0,
+        input_movement_vector * MAX_SPEED,
+        ACCELERATION,
+    );
 
     // clamp to bounds
     player_transform.translation.x = player_transform.translation.x.clamp(-15.0, 15.0);
     player_transform.translation.y = player_transform.translation.y.clamp(-8.0, 8.0);
 
     // set rotation degrees in euler angles for x and y to velocity / 2
-    player_transform.rotation = Quat::from_euler(EulerRot::XYZ, deg_to_rad(player_velocity.0.y / 2.0), deg_to_rad(player_velocity.0.x / 2.0), deg_to_rad(-player_velocity.0.x / 2.0));
+    player_transform.rotation = Quat::from_euler(
+        EulerRot::XYZ,
+        deg_to_rad(player_velocity.0.y / 2.0),
+        deg_to_rad(player_velocity.0.x / 2.0),
+        deg_to_rad(-player_velocity.0.x / 2.0),
+    );
 }
 
 fn fire_bullet(
@@ -152,7 +163,7 @@ fn fire_bullet(
 }
 
 // Moves from toward to by the delta value and returns a new vector
-fn move_toward(from: Vec3, to: Vec3, delta: f32) -> Vec3  {
+fn move_toward(from: Vec3, to: Vec3, delta: f32) -> Vec3 {
     let mut result = to - from;
     let length = result.length();
     if length <= delta || length == 0.0 {
