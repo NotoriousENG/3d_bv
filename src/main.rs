@@ -7,7 +7,7 @@ use bevy_rapier3d::prelude::*;
 
 use crate::skybox::SkyboxPlugin;
 
-// Defines the amount of time that should elapse between each physics step.
+/// Defines the amount of time that should elapse between each physics step.
 const TIME_STEP: f32 = 1.0 / 60.0;
 const MAX_SPEED: f32 = 20.0;
 const ACCELERATION: f32 = 0.75;
@@ -21,6 +21,9 @@ struct Player;
 
 #[derive(Component)]
 struct Enemy;
+
+#[derive(Component)]
+struct Bullet;
 
 #[derive(Component)]
 struct Velocity(Vec3);
@@ -46,6 +49,8 @@ fn main() {
         .add_system(velocity_movement)
         .add_system(fire_bullet)
         .add_system(spawn_enemies)
+        .add_system(display_events)
+        .add_system(handle_bullet_events)
         .run();
 }
 
@@ -102,7 +107,7 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
     })
 }
 
-// apply velocity to transform
+/// apply velocity to transform
 fn velocity_movement(
     mut commands: Commands,
     mut query: Query<(&mut Transform, &Velocity, Entity)>,
@@ -179,8 +184,9 @@ fn fire_bullet(
             ..default()
         },
         Velocity(player_transform.forward() * BULLET_SPEED),
+        Bullet,
         Collider::cuboid(0.494, 0.494, 2.144),
-        ActiveCollisionTypes::default() | ActiveCollisionTypes::KINEMATIC_KINEMATIC
+        Sensor,
     ));
 }
 
@@ -211,12 +217,49 @@ fn spawn_enemies(
             Enemy,
             Velocity(Vec3::Z * ENEMY_SPEED),
             Collider::cuboid(2.17, 1.45, 1.73),
-            ActiveCollisionTypes::default() | ActiveCollisionTypes::KINEMATIC_KINEMATIC
+            RigidBody::Dynamic,
+            GravityScale(0.0),
+            ActiveEvents::COLLISION_EVENTS,
         ));
     }
 }
 
-// Moves from toward to by the delta value and returns a new vector
+/// A system that displays the Collision events
+fn display_events(
+    mut collision_events: EventReader<CollisionEvent>,
+    mut contact_force_events: EventReader<ContactForceEvent>,
+) {
+    for collision_event in collision_events.iter() {
+        println!("Received collision event: {:?}", collision_event);
+    }
+
+    for contact_force_event in contact_force_events.iter() {
+        println!("Received contact force event: {:?}", contact_force_event);
+    }
+}
+
+fn handle_bullet_events(
+    query: Query<Entity, With<Bullet>>,
+    mut contact_events: EventReader<CollisionEvent>,
+    mut commands: Commands,
+) {
+    for contact_event in contact_events.iter() {
+        for entity in query.iter() {
+            if let CollisionEvent::Started(h1, h2, _event_flag) = contact_event {
+                if h1 == &entity || h2 == &entity {
+                    if let Some(entity_commands) = commands.get_entity(*h1) {
+                        entity_commands.despawn_recursive();
+                    }
+                    if let Some(entity_commands) = commands.get_entity(*h2) {
+                        entity_commands.despawn_recursive();
+                    }
+                }
+            }
+        }
+    }
+}
+
+/// Moves from toward to by the delta value and returns a new vector
 fn move_toward(from: Vec3, to: Vec3, delta: f32) -> Vec3 {
     let mut result = to - from;
     let length = result.length();
@@ -228,7 +271,7 @@ fn move_toward(from: Vec3, to: Vec3, delta: f32) -> Vec3 {
     result
 }
 
-// convert from degrees to radians
+/// convert from degrees to radians
 fn deg_to_rad(degrees: f32) -> f32 {
     degrees * std::f32::consts::PI / 180.0
 }
