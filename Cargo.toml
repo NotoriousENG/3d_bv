@@ -4,7 +4,7 @@ version = "0.1.0"
 publish = false
 authors = ["Michael O'Connell <>"] # ToDo: add email
 edition = "2021"
-exclude = ["dist", "build", "credits"]
+exclude = ["dist", "build", "assets", "credits"]
 
 [profile.dev.package."*"]
 opt-level = 3
@@ -22,7 +22,10 @@ dev = [
 ]
 
 [dependencies]
-bevy = { version = "0.9"}
+bevy = { version = "0.9", default-features = false, features = ["bevy_asset", "bevy_winit", "render", "png", "x11"]}
 rand = "0.8.5"
 bevy_hanabi = { version = "0.5", default-features = false, features = [ "3d" ] }
 bevy_rapier3d = { version = "0.19", features = [ "simd-stable", "debug-render" ] }
+
+[build-dependencies]
+embed-resource = "1.4"
