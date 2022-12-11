@@ -3,6 +3,7 @@ use rand::prelude::*;
 use std::time::Duration;
 
 use bevy::{core_pipeline::bloom::BloomSettings, prelude::*, render::camera::Projection};
+use bevy_hanabi::prelude::*;
 use bevy_rapier3d::prelude::*;
 
 use crate::skybox::SkyboxPlugin;
@@ -28,6 +29,9 @@ struct Bullet;
 #[derive(Component)]
 struct Velocity(Vec3);
 
+#[derive(Component)]
+struct Firework;
+
 #[derive(Resource)]
 struct EnemySpawnTime {
     timer: Timer,
@@ -37,7 +41,8 @@ fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
         .add_plugin(RapierPhysicsPlugin::<NoUserData>::default())
-        .add_plugin(RapierDebugRenderPlugin::default())
+        //.add_plugin(RapierDebugRenderPlugin::default()) // disable hdr to use
+        .add_plugin(HanabiPlugin)
         .insert_resource(AmbientLight {
             color: Color::WHITE,
             brightness: 1.0 / 5.0f32,
@@ -45,6 +50,7 @@ fn main() {
         .insert_resource(Msaa { samples: 4 })
         .add_plugin(SkyboxPlugin)
         .add_startup_system(setup)
+        .add_startup_system(setup_fx)
         .add_system(move_player)
         .add_system(velocity_movement)
         .add_system(fire_bullet)
@@ -75,7 +81,7 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
     commands.spawn((
         Camera3dBundle {
             camera: Camera {
-                // hdr: true, // disable to use rapier debug render pipeline
+                hdr: true, // disable to use rapier debug render pipeline
                 ..default()
             },
             projection: Projection::Perspective(PerspectiveProjection {
@@ -105,6 +111,47 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
     commands.insert_resource(EnemySpawnTime {
         timer: Timer::new(Duration::from_secs(ENEMY_SPAWN_TIME), TimerMode::Repeating),
     })
+}
+
+fn setup_fx(mut commands: Commands, mut effects: ResMut<Assets<EffectAsset>>) {
+    let mut color_gradient1 = Gradient::new();
+    color_gradient1.add_key(0.0, Vec4::new(4.0, 4.0, 4.0, 1.0));
+    color_gradient1.add_key(0.1, Vec4::new(4.0, 4.0, 0.0, 1.0));
+    color_gradient1.add_key(0.9, Vec4::new(4.0, 0.0, 0.0, 1.0));
+    color_gradient1.add_key(1.0, Vec4::new(4.0, 0.0, 0.0, 0.0));
+
+    let mut size_gradient1 = Gradient::new();
+    size_gradient1.add_key(0.0, Vec2::splat(0.1));
+    size_gradient1.add_key(0.3, Vec2::splat(0.1));
+    size_gradient1.add_key(1.0, Vec2::splat(0.0));
+
+    let firework_fx = effects.add(
+        EffectAsset {
+            name: "firework".to_string(),
+            capacity: 32768,
+            spawner: Spawner::once(500.0.into(), false),
+            ..Default::default()
+        }
+        .init(PositionSphereModifier {
+            dimension: ShapeDimension::Volume,
+            radius: 2.,
+            speed: 70_f32.into(),
+            center: Vec3::ZERO,
+        })
+        .init(ParticleLifetimeModifier { lifetime: 1. })
+        .update(LinearDragModifier { drag: 5. })
+        .update(AccelModifier {
+            accel: Vec3::new(0., -8., 0.),
+        })
+        .render(ColorOverLifetimeModifier {
+            gradient: color_gradient1,
+        })
+        .render(SizeOverLifetimeModifier {
+            gradient: size_gradient1,
+        }),
+    );
+
+    commands.spawn((ParticleEffectBundle::new(firework_fx), Firework));
 }
 
 /// apply velocity to transform
@@ -239,14 +286,20 @@ fn display_events(
 }
 
 fn handle_bullet_events(
-    query: Query<Entity, With<Bullet>>,
+    query: Query<(Entity, &Transform), With<Bullet>>,
     mut contact_events: EventReader<CollisionEvent>,
     mut commands: Commands,
+    mut effect: Query<(&mut ParticleEffect, &mut Transform), (With<Firework>, Without<Bullet>)>,
 ) {
+    let (mut effect, mut effect_transform) = effect.single_mut();
+
     for contact_event in contact_events.iter() {
-        for entity in query.iter() {
+        for (bullet_entity, bullet_transform) in query.iter() {
             if let CollisionEvent::Started(h1, h2, _event_flag) = contact_event {
-                if h1 == &entity || h2 == &entity {
+                if h1 == &bullet_entity || h2 == &bullet_entity {
+                    effect_transform.translation = bullet_transform.translation;
+                    effect.maybe_spawner().unwrap().reset();
+
                     if let Some(entity_commands) = commands.get_entity(*h1) {
                         entity_commands.despawn_recursive();
                     }
