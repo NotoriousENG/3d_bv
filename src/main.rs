@@ -1,6 +1,9 @@
 mod particles;
 mod skybox;
 
+use bevy::reflect::TypeUuid;
+use bevy::render::render_resource::{AsBindGroup, ShaderRef};
+use bevy::window::PresentMode;
 use bevy_hanabi::ParticleEffect;
 use rand::prelude::*;
 use std::time::Duration;
@@ -13,7 +16,8 @@ use crate::skybox::SkyboxPlugin;
 
 /// Defines the amount of time that should elapse between each physics step.
 const TIME_STEP: f32 = 1.0 / 60.0;
-const MAX_SPEED: f32 = 20.0;
+const MAX_SPEED: f32 = 30.0;
+const ROT_SPEED: f32 = 3.0;
 const ACCELERATION: f32 = 0.75;
 const BULLET_SPEED: f32 = 300.0;
 const BOUNDS_POS: Vec3 = Vec3::new(15.0, 8.0, 300.0);
@@ -37,13 +41,47 @@ struct EnemySpawnTime {
     timer: Timer,
 }
 
+/// The Material trait is very configurable, but comes with sensible defaults for all methods.
+/// You only need to implement functions for features that need non-default behavior. See the Material api docs for details!
+impl Material for CrosshairMaterial {
+    fn fragment_shader() -> ShaderRef {
+        "shaders/custom_material.wgsl".into()
+    }
+
+    fn alpha_mode(&self) -> AlphaMode {
+        self.alpha_mode
+    }
+}
+
+// This is the struct that will be passed to your shader
+#[derive(AsBindGroup, TypeUuid, Debug, Clone)]
+#[uuid = "f690fdae-d598-45ab-8225-97e2a3f056e0"]
+pub struct CrosshairMaterial {
+    #[uniform(0)]
+    color: Color,
+    #[texture(1)]
+    #[sampler(2)]
+    color_texture: Option<Handle<Image>>,
+    alpha_mode: AlphaMode,
+}
+
 #[bevy_main]
 fn main() {
     App::new()
-        .add_plugins(DefaultPlugins)
+        .add_plugins(DefaultPlugins.set(WindowPlugin {
+            window: WindowDescriptor {
+                title: "Fake Star Fox".to_string(),
+                width: 800.,
+                height: 600.,
+                present_mode: PresentMode::AutoVsync,
+                ..default()
+            },
+            ..default()
+        }))
         .add_plugin(RapierPhysicsPlugin::<NoUserData>::default())
         //.add_plugin(RapierDebugRenderPlugin::default()) // disable hdr to use
         .add_plugin(ParticlePlugin)
+        .add_plugin(MaterialPlugin::<CrosshairMaterial>::default())
         .insert_resource(AmbientLight {
             color: Color::WHITE,
             brightness: 1.0 / 5.0f32,
@@ -60,7 +98,12 @@ fn main() {
         .run();
 }
 
-fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
+fn setup(
+    mut commands: Commands,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<CrosshairMaterial>>,
+    asset_server: Res<AssetServer>,
+) {
     const HALF_SIZE: f32 = 1.0;
     commands.spawn(DirectionalLightBundle {
         directional_light: DirectionalLight {
@@ -85,7 +128,7 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
                 ..default()
             },
             projection: Projection::Perspective(PerspectiveProjection {
-                fov: 70.0,
+                fov: deg_to_rad(70.0),
                 near: 0.05,
                 far: 300.0,
                 ..default()
@@ -98,15 +141,40 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
             ..default()
         },
     ));
-    commands.spawn((
-        SceneBundle {
-            scene: asset_server.load("models/Spaceship/player.gltf#Scene0"),
-            transform: Transform::from_xyz(0.0, 0.0, -15.0),
-            ..default()
-        },
-        Player,
-        Velocity(Vec3::ZERO),
-    ));
+    commands
+        .spawn((
+            SceneBundle {
+                scene: asset_server.load("models/Spaceship/player.gltf#Scene0"),
+                transform: Transform::from_xyz(0.0, 0.0, -15.0),
+                ..default()
+            },
+            Player,
+            Velocity(Vec3::ZERO),
+        ))
+        .with_children(|parent| {
+            // crosshair1
+            parent.spawn(MaterialMeshBundle {
+                mesh: meshes.add(Mesh::from(shape::Quad::new(Vec2::new(5.0, 5.0)))),
+                transform: Transform::from_xyz(0.0, 0.0, -60.0),
+                material: materials.add(CrosshairMaterial {
+                    color: Color::GREEN,
+                    color_texture: Some(asset_server.load("textures/crosshair1.png")),
+                    alpha_mode: AlphaMode::Blend,
+                }),
+                ..default()
+            });
+            // crosshair2
+            parent.spawn(MaterialMeshBundle {
+                mesh: meshes.add(Mesh::from(shape::Quad::new(Vec2::new(5.0, 5.0)))),
+                transform: Transform::from_xyz(0.0, 0.0, -250.0),
+                material: materials.add(CrosshairMaterial {
+                    color: Color::GREEN,
+                    color_texture: Some(asset_server.load("textures/crosshair2.png")),
+                    alpha_mode: AlphaMode::Blend,
+                }),
+                ..default()
+            });
+        });
 
     commands.insert_resource(EnemySpawnTime {
         timer: Timer::new(Duration::from_secs(ENEMY_SPAWN_TIME), TimerMode::Repeating),
@@ -153,12 +221,16 @@ fn move_player(
     player_transform.translation.x = player_transform.translation.x.clamp(-15.0, 15.0);
     player_transform.translation.y = player_transform.translation.y.clamp(-8.0, 8.0);
 
-    // set rotation degrees in euler angles for x and y to velocity / 2
+    // rotation_degrees.z = move_toward(rotation_degrees.z, target_z_rot, ROTSPEED)
+    let player_eulers = Vec3::from(player_transform.rotation.to_euler(EulerRot::XYZ));
+    let target_z_rot = player_velocity.0.x * -2.0;
+    let new_z_rot = move_toward_f32(player_eulers.z, deg_to_rad(target_z_rot), ROT_SPEED);
+
     player_transform.rotation = Quat::from_euler(
         EulerRot::XYZ,
         deg_to_rad(player_velocity.0.y / 2.0),
-        deg_to_rad(player_velocity.0.x / 2.0),
-        deg_to_rad(-player_velocity.0.x / 2.0),
+        deg_to_rad(player_velocity.0.x / -2.0),
+        new_z_rot,
     );
 }
 
@@ -277,6 +349,18 @@ fn handle_bullet_events(
 fn move_toward(from: Vec3, to: Vec3, delta: f32) -> Vec3 {
     let mut result = to - from;
     let length = result.length();
+    if length <= delta || length == 0.0 {
+        return to;
+    }
+    result *= delta / length;
+    result += from;
+    result
+}
+
+// same as move toward but for f32
+fn move_toward_f32(from: f32, to: f32, delta: f32) -> f32 {
+    let mut result = to - from;
+    let length = result.abs();
     if length <= delta || length == 0.0 {
         return to;
     }
