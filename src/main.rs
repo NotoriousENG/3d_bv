@@ -93,7 +93,6 @@ fn main() {
         .add_system(velocity_movement)
         .add_system(fire_bullet)
         .add_system(spawn_enemies)
-        .add_system(display_events)
         .add_system(handle_bullet_events)
         .run();
 }
@@ -302,20 +301,6 @@ fn spawn_enemies(
             GravityScale(0.0),
             ActiveEvents::COLLISION_EVENTS,
         ));
-    }
-}
-
-/// A system that displays the Collision events
-fn display_events(
-    mut collision_events: EventReader<CollisionEvent>,
-    mut contact_force_events: EventReader<ContactForceEvent>,
-) {
-    for collision_event in collision_events.iter() {
-        println!("Received collision event: {:?}", collision_event);
-    }
-
-    for contact_force_event in contact_force_events.iter() {
-        println!("Received contact force event: {:?}", contact_force_event);
     }
 }
 
