@@ -141,6 +141,10 @@ fn setup(
             ..default()
         },
     ));
+
+    let quad_mesh_5 = meshes.add(Mesh::from(shape::Quad::new(Vec2::new(5.0, 5.0))));
+    let color_crosshair = Color::GREEN;
+
     commands
         .spawn((
             SceneBundle {
@@ -154,10 +158,10 @@ fn setup(
         .with_children(|parent| {
             // crosshair1
             parent.spawn(MaterialMeshBundle {
-                mesh: meshes.add(Mesh::from(shape::Quad::new(Vec2::new(5.0, 5.0)))),
+                mesh: quad_mesh_5.clone(),
                 transform: Transform::from_xyz(0.0, 0.0, -60.0),
                 material: materials.add(CrosshairMaterial {
-                    color: Color::GREEN,
+                    color: color_crosshair,
                     color_texture: Some(asset_server.load("textures/crosshair1.png")),
                     alpha_mode: AlphaMode::Blend,
                 }),
@@ -165,10 +169,10 @@ fn setup(
             });
             // crosshair2
             parent.spawn(MaterialMeshBundle {
-                mesh: meshes.add(Mesh::from(shape::Quad::new(Vec2::new(5.0, 5.0)))),
+                mesh: quad_mesh_5.clone(),
                 transform: Transform::from_xyz(0.0, 0.0, -250.0),
                 material: materials.add(CrosshairMaterial {
-                    color: Color::GREEN,
+                    color: color_crosshair,
                     color_texture: Some(asset_server.load("textures/crosshair2.png")),
                     alpha_mode: AlphaMode::Blend,
                 }),
