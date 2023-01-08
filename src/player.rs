@@ -1,6 +1,7 @@
 use bevy::prelude::*;
 
 use crate::bullet::create_bullet;
+use crate::constants::BOUNDS_POS;
 use crate::materials::ColorMaterial;
 use crate::math::{deg_to_rad, move_toward, move_toward_f32};
 use crate::velocity::Velocity;
@@ -12,6 +13,7 @@ impl Plugin for PlayerPlugin {
         app.add_startup_system(spawn_player)
             .add_system(move_player)
             .add_system(fire_bullet)
+            .add_system(move_camera)
             .add_plugin(MaterialPlugin::<ColorMaterial>::default());
     }
 }
@@ -66,7 +68,17 @@ fn spawn_player(
                 }),
                 ..default()
             });
-        });
+        }); 
+}
+
+fn move_camera(
+    query: Query<&Transform, (With<Player>, Without<Camera>)>,
+    mut camera_query: Query<&mut Transform, With<Camera>>,
+) {
+    let player_transform = query.single();
+    let mut camera_transform = camera_query.single_mut();
+
+    camera_transform.translation.z = player_transform.translation.z + 15.0;
 }
 
 fn move_player(
@@ -89,9 +101,15 @@ fn move_player(
         ACCELERATION,
     );
 
+    player_velocity.0.z = -10.0;
+
     // clamp to bounds
-    player_transform.translation.x = player_transform.translation.x.clamp(-15.0, 15.0);
-    player_transform.translation.y = player_transform.translation.y.clamp(-8.0, 8.0);
+    player_transform.translation.x = player_transform.translation.x.clamp(-BOUNDS_POS.x, BOUNDS_POS.x);
+    player_transform.translation.y = player_transform.translation.y.clamp(-BOUNDS_POS.y, BOUNDS_POS.y);
+
+    if player_transform.translation.z < -BOUNDS_POS.z + 10.0 {
+        player_transform.translation.z = -15.0;
+    }
 
     // rotation_degrees.z = move_toward(rotation_degrees.z, target_z_rot, ROTSPEED)
     let player_eulers = Vec3::from(player_transform.rotation.to_euler(EulerRot::XYZ));
