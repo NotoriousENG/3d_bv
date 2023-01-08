@@ -2,6 +2,7 @@ mod bullet;
 mod constants;
 mod enemy;
 mod game;
+mod level;
 mod materials;
 mod math;
 mod particles;

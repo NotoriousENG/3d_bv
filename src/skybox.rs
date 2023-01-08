@@ -18,10 +18,16 @@ use bevy::{
     },
 };
 
+#[derive(Debug, Clone, Eq, PartialEq, Hash)]
+pub enum SkyboxState {
+    Loading,
+    Loaded,
+}
+
 #[derive(Resource)]
-struct Cubemap {
-    is_loaded: bool,
-    image_handle: Handle<Image>,
+pub struct Cubemap {
+    pub is_loaded: bool,
+    pub image_handle: Handle<Image>,
 }
 
 #[derive(Debug, Clone, TypeUuid)]
@@ -119,7 +125,8 @@ pub struct SkyboxPlugin;
 
 impl Plugin for SkyboxPlugin {
     fn build(&self, app: &mut App) {
-        app.add_plugin(MaterialPlugin::<CubemapMaterial>::default())
+        app.add_state(SkyboxState::Loading)
+            .add_plugin(MaterialPlugin::<CubemapMaterial>::default())
             .add_startup_system(setup_skybox)
             .add_system(load_skybox);
     }
@@ -141,6 +148,7 @@ fn load_skybox(
     mut cubemap_materials: ResMut<Assets<CubemapMaterial>>,
     mut cubemap: ResMut<Cubemap>,
     cubes: Query<&Handle<CubemapMaterial>>,
+    mut sky_state: ResMut<State<SkyboxState>>,
 ) {
     if !cubemap.is_loaded
         && asset_server.get_load_state(cubemap.image_handle.clone_weak()) == LoadState::Loaded
@@ -177,5 +185,17 @@ fn load_skybox(
         }
 
         cubemap.is_loaded = true;
+
+        match sky_state.current() {
+            SkyboxState::Loading => {
+                sky_state.set(SkyboxState::Loaded).unwrap();
+            }
+            SkyboxState::Loaded => {}
+        }
     }
+}
+
+pub fn set_skybox_texture(mut cubemap: ResMut<Cubemap>, image_handle: Handle<Image>) {
+    cubemap.image_handle = image_handle;
+    cubemap.is_loaded = false;
 }

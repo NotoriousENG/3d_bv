@@ -6,8 +6,8 @@ pub struct ParticlePlugin;
 impl Plugin for ParticlePlugin {
     fn build(&self, app: &mut App) {
         app.add_plugin(HanabiPlugin)
-            .add_startup_system(setup_fireworks)
-            .add_startup_system(setup_shooting_stars);
+            .add_startup_system(setup_fireworks);
+        // .add_startup_system(setup_shooting_stars);
     }
 }
 
