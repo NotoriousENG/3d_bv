@@ -78,7 +78,7 @@ fn setup_shooting_stars(mut commands: Commands, mut effects: ResMut<Assets<Effec
             dimension: ShapeDimension::Surface,
             speed: 70_f32.into(),
             radius: 15.,
-            center: Vec3::new(0., 0., -300.)
+            center: Vec3::new(0., 0., -300.),
         })
         .init(ParticleLifetimeModifier { lifetime: 10. })
         .render(BillboardModifier {})

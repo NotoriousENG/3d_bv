@@ -1,9 +1,9 @@
-struct CustomMaterial {
+struct ColorMaterial {
     color: vec4<f32>,
 };
 
 @group(1) @binding(0)
-var<uniform> material: CustomMaterial;
+var<uniform> material: ColorMaterial;
 @group(1) @binding(1)
 var base_color_texture: texture_2d<f32>;
 @group(1) @binding(2)
