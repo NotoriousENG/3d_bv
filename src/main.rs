@@ -1,6 +1,7 @@
 mod bullet;
 mod constants;
 mod enemy;
+mod events;
 mod game;
 mod level;
 mod materials;

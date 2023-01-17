@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 
-use crate::bullet::create_bullet;
 use crate::constants::BOUNDS_POS;
+use crate::events::SpawnBulletEvent;
 use crate::materials::ColorMaterial;
 use crate::math::{deg_to_rad, move_toward, move_toward_f32};
 use crate::velocity::Velocity;
@@ -68,7 +68,7 @@ fn spawn_player(
                 }),
                 ..default()
             });
-        }); 
+        });
 }
 
 fn move_camera(
@@ -104,8 +104,14 @@ fn move_player(
     player_velocity.0.z = -10.0;
 
     // clamp to bounds
-    player_transform.translation.x = player_transform.translation.x.clamp(-BOUNDS_POS.x, BOUNDS_POS.x);
-    player_transform.translation.y = player_transform.translation.y.clamp(-BOUNDS_POS.y, BOUNDS_POS.y);
+    player_transform.translation.x = player_transform
+        .translation
+        .x
+        .clamp(-BOUNDS_POS.x, BOUNDS_POS.x);
+    player_transform.translation.y = player_transform
+        .translation
+        .y
+        .clamp(-BOUNDS_POS.y, BOUNDS_POS.y);
 
     if player_transform.translation.z < -BOUNDS_POS.z + 10.0 {
         player_transform.translation.z = -15.0;
@@ -125,10 +131,9 @@ fn move_player(
 }
 
 fn fire_bullet(
-    commands: Commands,
     keyboard_input: Res<Input<KeyCode>>,
-    asset_server: Res<AssetServer>,
     query: Query<&Transform, With<Player>>,
+    mut ev_fire: EventWriter<SpawnBulletEvent>,
 ) {
     // if spacebar is pressed
     if !keyboard_input.just_pressed(KeyCode::Space) {
@@ -143,12 +148,9 @@ fn fire_bullet(
         ..default()
     };
 
-    // spawn bullet
-    create_bullet(
-        commands,
-        bullet_transform,
-        player_transform.forward(),
-        BULLET_SPEED,
-        asset_server,
-    );
+    ev_fire.send(SpawnBulletEvent {
+        transform: bullet_transform,
+        direction: player_transform.forward(),
+        speed: BULLET_SPEED,
+    });
 }

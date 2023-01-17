@@ -3,6 +3,7 @@ use bevy_rapier3d::prelude::*;
 
 use crate::bullet::BulletPlugin;
 use crate::enemy::EnemyPlugin;
+use crate::events::EventPlugin;
 use crate::level::LevelPlugin;
 use crate::math::deg_to_rad;
 use crate::particles::ParticlePlugin;
@@ -14,6 +15,7 @@ pub struct GamePlugin;
 impl Plugin for GamePlugin {
     fn build(&self, app: &mut App) {
         app.add_startup_system(setup)
+            .add_plugin(EventPlugin)
             .add_plugin(RapierPhysicsPlugin::<NoUserData>::default())
             .add_plugin(VelocityPlugin)
             .add_plugin(PlayerPlugin)
