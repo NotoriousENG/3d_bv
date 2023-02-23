@@ -2,7 +2,7 @@ use bevy::prelude::*;
 use bevy_rapier3d::prelude::{Collider, CollisionEvent, Sensor};
 
 use crate::{
-    events::{ExplosionEvent, SpawnBulletEvent},
+    events::{ExplosionEvent, SpawnBulletEvent, TeardownLevelEvent},
     velocity::Velocity,
 };
 
@@ -11,12 +11,25 @@ pub struct BulletPlugin;
 impl Plugin for BulletPlugin {
     fn build(&self, app: &mut App) {
         app.add_system(handle_collision_events)
-            .add_system(create_bullet);
+            .add_system(create_bullet)
+            .add_system(on_teardown);
     }
 }
 
 #[derive(Component)]
 pub struct Bullet;
+
+fn on_teardown(
+    mut commands: Commands,
+    mut ev_teardown: EventReader<TeardownLevelEvent>,
+    query_bullet: Query<Entity, With<Bullet>>,
+) {
+    for _ in ev_teardown.iter() {
+        for entity in query_bullet.iter() {
+            commands.entity(entity).despawn_recursive();
+        }
+    }
+}
 
 fn create_bullet(
     mut commands: Commands,

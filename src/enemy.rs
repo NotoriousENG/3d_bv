@@ -4,6 +4,7 @@ use rand::prelude::*;
 use std::time::Duration;
 
 use crate::constants::BOUNDS_POS;
+use crate::events::TeardownLevelEvent;
 use crate::math::deg_to_rad;
 use crate::velocity::Velocity;
 
@@ -14,7 +15,9 @@ pub struct EnemyPlugin;
 
 impl Plugin for EnemyPlugin {
     fn build(&self, app: &mut App) {
-        app.add_startup_system(setup).add_system(spawn_enemies);
+        app.add_startup_system(setup)
+            .add_system(spawn_enemies)
+            .add_system(on_teardown);
     }
 }
 
@@ -29,6 +32,18 @@ fn setup(mut commands: Commands) {
     commands.insert_resource(EnemySpawnTime {
         timer: Timer::new(Duration::from_secs(ENEMY_SPAWN_TIME), TimerMode::Repeating),
     })
+}
+
+fn on_teardown(
+    mut commands: Commands,
+    query: Query<Entity, With<Enemy>>,
+    mut ev_teardown: EventReader<TeardownLevelEvent>,
+) {
+    for _ in ev_teardown.iter() {
+        for entity in query.iter() {
+            commands.entity(entity).despawn_recursive();
+        }
+    }
 }
 
 fn spawn_enemies(

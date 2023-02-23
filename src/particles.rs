@@ -61,10 +61,10 @@ fn handle_explosion_events(
     mut query_effect: Query<(&mut ParticleEffect, &mut Transform), With<Firework>>,
     mut ev_explosion: EventReader<ExplosionEvent>,
 ) {
-    let (mut firework_fx, mut firework_transform) = query_effect.single_mut();
-
-    for ev in ev_explosion.iter() {
-        firework_transform.translation = ev.0.translation;
-        firework_fx.maybe_spawner().unwrap().reset();
+    for (mut firework_fx, mut firework_transform) in query_effect.iter_mut() {
+        for ev in ev_explosion.iter() {
+            firework_transform.translation = ev.0.translation;
+            firework_fx.maybe_spawner().unwrap().reset();
+        }
     }
 }

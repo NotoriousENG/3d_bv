@@ -1,11 +1,12 @@
-use bevy::{core_pipeline::bloom::BloomSettings, prelude::*, render::camera::Projection};
+use bevy::prelude::*;
+// use bevy_editor_pls::prelude::*;
 use bevy_rapier3d::prelude::*;
 
 use crate::bullet::BulletPlugin;
+use crate::constants::make_cam_entity;
 use crate::enemy::EnemyPlugin;
 use crate::events::EventPlugin;
 use crate::level::LevelPlugin;
-use crate::math::deg_to_rad;
 use crate::particles::ParticlePlugin;
 use crate::player::PlayerPlugin;
 use crate::velocity::VelocityPlugin;
@@ -24,6 +25,7 @@ impl Plugin for GamePlugin {
             .add_plugin(ParticlePlugin)
             //.add_plugin(RapierDebugRenderPlugin::default()) // disable hdr to use
             .add_plugin(LevelPlugin)
+            // .add_plugin(EditorPlugin)
             .run();
     }
 }
@@ -46,24 +48,5 @@ fn setup(mut commands: Commands) {
         },
         ..default()
     });
-    commands.spawn((
-        Camera3dBundle {
-            camera: Camera {
-                hdr: true, // disable to use rapier debug render pipeline
-                ..default()
-            },
-            projection: Projection::Perspective(PerspectiveProjection {
-                fov: deg_to_rad(70.0),
-                near: 0.05,
-                far: 300.0,
-                ..default()
-            }),
-            transform: Transform::from_xyz(0.0, 0.0, 0.0),
-            ..default()
-        },
-        BloomSettings {
-            intensity: 0.05,
-            ..default()
-        },
-    ));
+    commands.spawn(make_cam_entity(Transform::IDENTITY));
 }
