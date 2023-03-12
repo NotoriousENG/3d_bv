@@ -18,10 +18,16 @@ use bevy::{
     },
 };
 
-#[derive(Debug, Clone, Eq, PartialEq, Hash)]
+#[derive(Debug, Clone, Eq, PartialEq, Hash, States)]
 pub enum SkyboxState {
     Loading,
     Loaded,
+}
+
+impl Default for SkyboxState {
+    fn default() -> Self {
+        Self::Loading
+    }
 }
 
 #[derive(Resource)]
@@ -61,7 +67,7 @@ impl AsBindGroup for CubemapMaterial {
         render_device: &RenderDevice,
         images: &RenderAssets<Image>,
         _fallback_image: &FallbackImage,
-    ) -> Result<PreparedBindGroup<Self>, AsBindGroupError> {
+    ) -> Result<PreparedBindGroup<()>, AsBindGroupError> {
         let base_color_texture = self
             .base_color_texture
             .as_ref()
@@ -125,7 +131,7 @@ pub struct SkyboxPlugin;
 
 impl Plugin for SkyboxPlugin {
     fn build(&self, app: &mut App) {
-        app.add_state(SkyboxState::Loading)
+        app.add_state::<SkyboxState>()
             .add_plugin(MaterialPlugin::<CubemapMaterial>::default())
             .add_startup_system(setup_skybox)
             .add_system(load_skybox);
@@ -148,7 +154,7 @@ fn load_skybox(
     mut cubemap_materials: ResMut<Assets<CubemapMaterial>>,
     mut cubemap: ResMut<Cubemap>,
     cubes: Query<&Handle<CubemapMaterial>>,
-    mut sky_state: ResMut<State<SkyboxState>>,
+    mut next_sky_state: ResMut<NextState<SkyboxState>>,
 ) {
     if !cubemap.is_loaded
         && asset_server.get_load_state(cubemap.image_handle.clone_weak()) == LoadState::Loaded
@@ -186,12 +192,7 @@ fn load_skybox(
 
         cubemap.is_loaded = true;
 
-        match sky_state.current() {
-            SkyboxState::Loading => {
-                sky_state.set(SkyboxState::Loaded).unwrap();
-            }
-            SkyboxState::Loaded => {}
-        }
+        next_sky_state.set(SkyboxState::Loaded);
     }
 }
 

@@ -18,16 +18,16 @@ codegen-units = 1
 
 [features]
 dev = [
-    "bevy/dynamic",
+    "bevy/dynamic_linking",
 ]
 
 [dependencies]
-bevy = { version = "0.9", default-features = false, features = ["bevy_asset", "bevy_winit", "render", "png", "x11"]}
+bevy = { version = "0.10", default-features = true}
 rand = "0.8.5"
-bevy_hanabi = { version = "0.5", default-features = false, features = [ "3d" ] }
-bevy_rapier3d = { version = "0.19", features = [ "simd-stable", "debug-render" ] }
-bevy_asset_loader = "0.14.1"
-bevy_editor_pls = "0.2.0"
+bevy_hanabi = { version = "0.6", default-features = false, features = [ "3d" ] }
+bevy_rapier3d = { version = "0.21", features = [ "simd-stable", "debug-render" ] }
+bevy_asset_loader = "0.15"
+bevy_editor_pls = "0.3"
 
 [build-dependencies]
 embed-resource = "1.4"

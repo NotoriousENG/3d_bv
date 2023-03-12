@@ -32,20 +32,30 @@ fn setup_fireworks(mut commands: Commands, mut effects: ResMut<Assets<EffectAsse
         EffectAsset {
             name: "firework".to_string(),
             capacity: 32768,
-            spawner: Spawner::once(500.0.into(), false),
+            spawner: Spawner::once(2500.0.into(), false),
             ..Default::default()
         }
-        .init(PositionSphereModifier {
-            dimension: ShapeDimension::Volume,
-            radius: 2.,
-            speed: 70_f32.into(),
+        .init(InitPositionSphereModifier {
             center: Vec3::ZERO,
+            radius: 2.,
+            dimension: ShapeDimension::Volume,
         })
-        .init(ParticleLifetimeModifier { lifetime: 1. })
+        .init(InitVelocitySphereModifier {
+            center: Vec3::ZERO,
+            // Give a bit of variation by randomizing the initial speed
+            speed: Value::Uniform((65., 75.)),
+        })
+        .init(InitLifetimeModifier {
+            // Give a bit of variation by randomizing the lifetime per particle
+            lifetime: Value::Uniform((0.8, 1.2)),
+        })
+        .init(InitAgeModifier {
+            // Give a bit of variation by randomizing the age per particle. This will control the
+            // starting color and starting size of particles.
+            age: Value::Uniform((0.0, 0.2)),
+        })
         .update(LinearDragModifier { drag: 5. })
-        .update(AccelModifier {
-            accel: Vec3::new(0., -8., 0.),
-        })
+        .update(AccelModifier::constant(Vec3::new(0., -8., 0.)))
         .render(ColorOverLifetimeModifier {
             gradient: color_gradient1,
         })

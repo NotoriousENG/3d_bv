@@ -9,10 +9,16 @@ use crate::{
 
 pub struct LevelPlugin;
 
-#[derive(Debug, Clone, Eq, PartialEq, Hash)]
+#[derive(Debug, Clone, Eq, PartialEq, Hash, States)]
 pub enum LevelState {
     Loading,
     Loaded,
+}
+
+impl Default for LevelState {
+    fn default() -> Self {
+        LevelState::Loading
+    }
 }
 
 #[derive(AssetCollection, Resource)]
@@ -75,20 +81,17 @@ pub struct PathTransformDescriptor {
 
 impl Plugin for LevelPlugin {
     fn build(&self, app: &mut App) {
-        app.add_state(LevelState::Loading)
+        app.add_state::<LevelState>()
             .add_loading_state(
-                LoadingState::new(LevelState::Loading)
-                    .continue_to_state(LevelState::Loaded)
-                    .with_collection::<LevelAssets>(),
+                LoadingState::new(LevelState::Loading).continue_to_state(LevelState::Loaded),
             )
-            .add_system_set(SystemSet::on_enter(LevelState::Loaded).with_system(setup))
-            .add_system_set(
-                SystemSet::on_update(LevelState::Loaded).with_system(change_level_input),
-            )
+            .add_collection_to_loading_state::<_, LevelAssets>(LevelState::Loading)
+            .add_system(setup.in_schedule(OnEnter(LevelState::Loaded)))
+            .add_system(change_level_input.in_set(OnUpdate(LevelState::Loaded)))
             .add_system(setup_level_data)
             .add_system(get_path_data)
             .add_plugin(SkyboxPlugin)
-            .add_system_set(SystemSet::on_enter(SkyboxState::Loaded).with_system(load_skybox))
+            .add_system(load_skybox.in_schedule(OnEnter(SkyboxState::Loaded)))
             .insert_resource(AmbientLight {
                 color: Color::WHITE,
                 brightness: 1.0,
